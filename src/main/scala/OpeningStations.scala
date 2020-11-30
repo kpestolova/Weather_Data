@@ -8,7 +8,7 @@ object OpeningStations extends App {
   /**
    * Opens a file and reads it
    */
-  val nameOfFile = "HU_meta.xml"
+  val nameOfFile = "LV_meta.xml"
   val readFile = loadFile(s"./src/resources/$nameOfFile")
   val stations = readFile \\ "station"
   val country = readFile \\ "country_name"
@@ -82,7 +82,7 @@ object OpeningStations extends App {
     val name = i.stName
     val EUcode = i.EUcode
     val writer = new PrintWriter(new File(s"${name}_${EUcode}_yearly.tsv"))
-    writer.write(i.toString)
+    writer.write("Component name\tCaption\tUnit\tTechnique Principle\tMean Value\tP50 Value\n\n" + i.toString)
     writer.close()
   }
 
