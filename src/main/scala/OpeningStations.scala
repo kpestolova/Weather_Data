@@ -2,6 +2,8 @@ import java.io.{File, PrintWriter}
 import scala.xml.{Node, NodeSeq}
 import scala.xml.XML.loadFile
 import org.json.XML
+import play.api.libs.json.Json
+import PointInPolygon.pointInPolygon
 
 object OpeningStations extends App {
 
@@ -117,5 +119,41 @@ object OpeningStations extends App {
   data.foreach(saveTSV)
   data.foreach(saveJSON)
   saveAll(stations \\ "station_info")
+
+  /**
+   * Opens the file of coordinates of European countries
+   * Selects the needed country and takes it's coordinates as a string
+   * Filters the string to get separated coordinates
+   */
+  val source = scala.io.Source.fromFile("./src/resources/european-union-countries.json")
+  val json = Json.parse(source.getLines().mkString)
+  val countryInfo = Json.parse((json \\ "fields").filter(i => (i \\ "formal_en").toString().toUpperCase.contains(country.text)).mkString)
+  val openingCoordinates = (countryInfo \ "geo_shape" \ "coordinates").get.toString
+  val stringCoordinates = openingCoordinates.dropRight(3).drop(3).split("],\\[")
+  source.close()
+
+  /**
+   * Takes an array of strings of coordinates
+   * Converts it to a list of GeoPoints(coordinates)
+   */
+  def toGeoPoints(v: Array[String]): List[GeoPoint] ={
+    v.map(x => x.split(",").toList.map(y => y.toDouble).reverse)
+      .toList.map( y => GeoPoint(y.head, y.last))
+  }
+
+  val polygon = Polygon(toGeoPoints(stringCoordinates)) /** Returns a polygon */
+
+  /**
+   * Takes a Station and checks if it is inside the country using method @pointInPolygon from object PointInPolygon
+   * Prints out the results - Station name, it's coordinates and true/false
+   */
+  def isInCountry(i:Station): Boolean = {
+    val coord = i.coordinates.split("\t").toList.map(x=> x.toDouble)
+    GeoPoint(coord.head, coord.last)
+    println(s"${i.stName} \n ${i.coordinates} \n ${pointInPolygon(GeoPoint(coord.head, coord.last), polygon)} \n")
+    pointInPolygon(GeoPoint(coord.head, coord.last), polygon)
+  }
+
+  data.map(isInCountry)
 
 }
